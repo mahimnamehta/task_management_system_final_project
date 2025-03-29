@@ -1,0 +1,37 @@
+﻿@page
+@model task_management_app.Pages.LoginModel
+@{
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 login-container">
+            <h2 class="mt-4 mb-4">LOGIN</h2>
+
+            @if (Model.ErrorMessage != null)
+            {
+                <div class="alert alert-danger">
+                    @Model.ErrorMessage
+                </div>
+            }
+
+            <form method="post">
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" type="password" />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Login</button>
+
+                <div class="text-center mt-3">
+                    <span>Do not have an account?</span>
+                    <a asp-page="/SignUp" class="btn btn-link">Register</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
