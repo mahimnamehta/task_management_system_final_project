@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("task_management_app")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+391a9e58c0549a4ed8140e2f9822d20fc3eb68cb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dbd953daa7e24ce12e09dc2819a9cc1618c44b4e")]
 [assembly: System.Reflection.AssemblyProductAttribute("task_management_app")]
 [assembly: System.Reflection.AssemblyTitleAttribute("task_management_app")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
