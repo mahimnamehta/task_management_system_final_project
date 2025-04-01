@@ -1,0 +1,1 @@
+## Project Description : This Project is about Task management. One can create account with secured JWT authentication and Authorization and manage tasks assigned to them or create delete tasks.
