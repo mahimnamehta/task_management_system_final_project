@@ -1,9 +1,18 @@
+using TaskManagerApp.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddHttpClient();
 builder.Services.AddSession();
+
+// Register MongoDbContext
+builder.Services.AddSingleton<MongoDbContext>(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    return new MongoDbContext(configuration);
+});
 
 var app = builder.Build();
 
