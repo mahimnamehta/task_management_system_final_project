@@ -1,23 +1,25 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Newtonsoft.Json;
-using System.Text;
+using MongoDB.Driver;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using TaskManagerApp.Data;
 using TaskManagerApp.Models;
-using static TaskManagerApp.Models.TasksResponse;
 
 namespace TaskManagerApp.Pages
 {
     public class IndexModel : PageModel
     {
-        private readonly HttpClient _httpClient;
-        public List<TaskItem> Tasks { get; set; } = new List<TaskItem>();
+        private readonly MongoDbContext _dbContext;
+
+        public IndexModel(MongoDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
+
+        public List<TaskManagerApp.Models.Task> Tasks { get; set; } = new List<TaskManagerApp.Models.Task>();
         public bool isShowingCreatedBy = true;
         public string ErrorMessage { get; set; }
-
-        public IndexModel(HttpClient HttpClient)
-        {
-            _httpClient = HttpClient;
-        }
 
         public async Task<IActionResult> OnGet(string ErrorMessage, bool IsAssignedToTab)
         {
@@ -25,6 +27,7 @@ namespace TaskManagerApp.Pages
             return await (IsAssignedToTab ? OnGetAssignedToMe() : OnGetCreatedByMe());
         }
 
+        // Fetch tasks created by the current user
         public async Task<IActionResult> OnGetCreatedByMe()
         {
             var token = GetToken();
@@ -33,12 +36,13 @@ namespace TaskManagerApp.Pages
                 return RedirectToPage("/Login");
             }
 
-            Tasks = await FetchTasksAsync("https://sea-lion-app-772a9.ondigitalocean.app/v1/tasks/createdby/", token);
+            Tasks = await FetchTasksAsync("CreatedByMe", token);
             isShowingCreatedBy = true;
 
             return Page();
         }
 
+        // Fetch tasks assigned to the current user
         public async Task<IActionResult> OnGetAssignedToMe()
         {
             var token = GetToken();
@@ -47,40 +51,41 @@ namespace TaskManagerApp.Pages
                 return RedirectToPage("/Login");
             }
 
-            Tasks = await FetchTasksAsync("https://sea-lion-app-772a9.ondigitalocean.app/v1/tasks/assignedto/", token);
+            Tasks = await FetchTasksAsync("AssignedToMe", token);
             isShowingCreatedBy = false;
 
             return Page();
         }
 
-        public async Task<List<TaskItem>> FetchTasksAsync(string url, string token)
+        public async Task<List<TaskManagerApp.Models.Task>> FetchTasksAsync(string filter, string token)
         {
             try
             {
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("x-access-token", token);
+                var filterDefinition = Builders<TaskManagerApp.Models.Task>.Filter.Empty;
 
-                var response = await _httpClient.GetAsync(url);
+                if (filter == "CreatedByMe")
+                {
+                    // Filter tasks created by the user (you might need a user ID or similar for filtering)
+                    var userId = token; // Assuming `token` is the user ID, replace with actual logic to retrieve user ID from session
+                    filterDefinition = Builders<TaskManagerApp.Models.Task>.Filter.Eq(t => t.CreatedByUid, userId);  // Use CreatedByUid for filtering
+                }
+                else if (filter == "AssignedToMe")
+                {
+                    // Filter tasks assigned to the user
+                    var userId = token; // Assuming `token` is the user ID, replace with actual logic
+                    filterDefinition = Builders<TaskManagerApp.Models.Task>.Filter.Eq(t => t.AssignedToUid, userId);
+                }
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    var tasksReponse = JsonConvert.DeserializeObject<TasksResponse>(responseString);
-                    return tasksReponse.AllTasks;
-                }
-                else
-                {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    var tasksReponse = JsonConvert.DeserializeObject<TasksResponse>(responseString);
-                    return new List<TaskItem>();
-                }
+                return await _dbContext.Tasks.Find(filterDefinition).ToListAsync();
             }
             catch (Exception ex)
             {
-                return new List<TaskItem>();
+                ErrorMessage = "Error fetching tasks from MongoDB: " + ex.Message;
+                return new List<TaskManagerApp.Models.Task>();
             }
         }
 
+        // Delete a task from MongoDB
         public async Task<IActionResult> OnPostDeleteTask(string taskUid)
         {
             var token = GetToken();
@@ -91,31 +96,25 @@ namespace TaskManagerApp.Pages
 
             try
             {
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("x-access-token", token);
-
-                var response = await _httpClient.DeleteAsync($"https://sea-lion-app-772a9.ondigitalocean.app/v1/tasks/{taskUid}");
-
-                if (response.IsSuccessStatusCode)
+                var deleteResult = await _dbContext.Tasks.DeleteOneAsync(t => t.Id == taskUid);
+                if (deleteResult.DeletedCount > 0)
                 {
                     return RedirectToPage();
                 }
                 else
                 {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    var taskDeleteResponse = JsonConvert.DeserializeObject<DeleteTaskResponse>(responseString);
-                    ErrorMessage = taskDeleteResponse.error;
+                    ErrorMessage = "Error deleting task from MongoDB.";
                 }
-
             }
             catch (Exception ex)
             {
-                ErrorMessage = "Error on deleting Task!";
+                ErrorMessage = "Error deleting task from MongoDB: " + ex.Message;
             }
 
             return RedirectToPage(new { ErrorMessage });
         }
 
+        // Mark a task as completed (done) in MongoDB
         public async Task<IActionResult> OnPostMarkAsDone(string taskUid)
         {
             var token = GetToken();
@@ -126,33 +125,23 @@ namespace TaskManagerApp.Pages
 
             try
             {
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("x-access-token", token);
+                var updateResult = await _dbContext.Tasks.UpdateOneAsync(
+                    Builders<TaskManagerApp.Models.Task>.Filter.Eq(t => t.Id, taskUid),
+                    Builders<TaskManagerApp.Models.Task>.Update.Set(t => t.IsCompleted, true)
+                );
 
-                var requestBody = new UpdateTaskRequest();
-                requestBody.Done = true;
-
-                var json = JsonConvert.SerializeObject(requestBody);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-
-                var response = await _httpClient.PatchAsync($"https://sea-lion-app-772a9.ondigitalocean.app/v1/tasks/{taskUid}", content);
-
-                if (response.IsSuccessStatusCode)
+                if (updateResult.ModifiedCount > 0)
                 {
                     return RedirectToPage(new { IsAssignedToTab = true });
                 }
                 else
                 {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    var taskUpdateResponse = JsonConvert.DeserializeObject<UpdateTaskResponse>(responseString);
-                    ErrorMessage = taskUpdateResponse.error;
+                    ErrorMessage = "Error updating task status.";
                 }
-
             }
             catch (Exception ex)
             {
-                ErrorMessage = "Error on deleting Task!";
+                ErrorMessage = "Error updating task status: " + ex.Message;
             }
 
             return RedirectToPage(new { ErrorMessage });

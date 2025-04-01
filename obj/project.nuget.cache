@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "A4LvpidloBk=",
+  "dgSpecHash": "qkqYlHTXrRM=",
   "success": true,
   "projectFilePath": "C:\\Users\\Mahimna Mehta\\Downloads\\Project\\task_management_system_final_project\\TaskManagerApp.csproj",
   "expectedPackageFiles": [
@@ -61,7 +61,8 @@
     "C:\\Users\\Mahimna Mehta\\.nuget\\packages\\system.security.cryptography.xml\\8.0.2\\system.security.cryptography.xml.8.0.2.nupkg.sha512",
     "C:\\Users\\Mahimna Mehta\\.nuget\\packages\\system.security.principal.windows\\5.0.0\\system.security.principal.windows.5.0.0.nupkg.sha512",
     "C:\\Users\\Mahimna Mehta\\.nuget\\packages\\system.text.encodings.web\\8.0.0\\system.text.encodings.web.8.0.0.nupkg.sha512",
-    "C:\\Users\\Mahimna Mehta\\.nuget\\packages\\zstdsharp.port\\0.7.3\\zstdsharp.port.0.7.3.nupkg.sha512"
+    "C:\\Users\\Mahimna Mehta\\.nuget\\packages\\zstdsharp.port\\0.7.3\\zstdsharp.port.0.7.3.nupkg.sha512",
+    "C:\\Users\\Mahimna Mehta\\.nuget\\packages\\microsoft.net.sdk.compilers.toolset\\9.0.202\\microsoft.net.sdk.compilers.toolset.9.0.202.nupkg.sha512"
   ],
   "logs": [
     {

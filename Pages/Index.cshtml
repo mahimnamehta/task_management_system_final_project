@@ -29,11 +29,11 @@
                     <div class="card h-100 shadow-sm custom-card">
                         <h5 class="card-title">@task.Description.ToUpper()</h5>
                         <p class="card-text">
-                            <strong>Created By:</strong> @task.CreatedByName.ToUpper() <br />
-                            <strong>Assigned To:</strong> @task.AssignedToName.ToUpper()  <br />
+                            <strong>Created By:</strong> @task.CreatedByUid.ToUpper() <br />
+                            <strong>Assigned To:</strong> @task.AssignedToUid.ToUpper()  <br />
                         </p>
 
-                        @if (@task.Done)
+                        @if (@task.IsCompleted)
                         {
                             <p class="alert alert-success">
                                 <strong>Status:</strong> Done
@@ -48,16 +48,16 @@
                         @if (Model.isShowingCreatedBy)
                         {
                             <form method="post" asp-page-handler="DeleteTask" onsubmit="return confirm('Are you sure you want to delete this task?');">
-                                <input type="hidden" name="taskUid" value="@task.TaskUid" />
+                                <input type="hidden" name="taskUid" value="@task.Id" />
                                 <button type="submit" class="btn btn-outline-danger">Delete</button>
                             </form>
                         }
                         else
                         {
-                            if (!task.Done)
+                            if (!task.IsCompleted)
                             {
                                 <form method="post" asp-page-handler="MarkAsDone" onsubmit="return confirm('Are you sure you want to finish this task?');">
-                                    <input type="hidden" name="taskUid" value="@task.TaskUid" />
+                                    <input type="hidden" name="taskUid" value="@task.Id" />
                                     <button type="submit" class="btn btn-outline-success">Mask as Done</button>
                                 </form>
                             }

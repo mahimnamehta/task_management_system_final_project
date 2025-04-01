@@ -1,73 +1,48 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Newtonsoft.Json; 
-using System;
-using System.Collections.Generic;
-using System.Linq;  
-using System.Text;
-using System.Threading.Tasks;
+using MongoDB.Driver;
+using TaskManagerApp.Data;
 using TaskManagerApp.Models;
 
 namespace TaskManagerApp.Pages
 {
     public class CreateModel : PageModel
     {
-        private readonly HttpClient _httpClient;
+        private readonly MongoDbContext _dbContext;
 
-        public CreateModel(HttpClient httpClient)
+        public CreateModel(MongoDbContext dbContext)
         {
-            _httpClient = httpClient;
+            _dbContext = dbContext;
         }
 
         [BindProperty]
-        public string AssignedToUid { get; set; }
+        public string Title { get; set; }
 
         [BindProperty]
         public string Description { get; set; }
 
+        [BindProperty]
+        public string Category { get; set; }
+
+        [BindProperty]
+        public DateTime DueDate { get; set; }
+
+        [BindProperty]
+        public string AssignedToUid { get; set; }
+
         public string ErrorMessage { get; set; }
-        public List<TaskManagerApp.Models.User> Users { get; set; } = new List<TaskManagerApp.Models.User>();  // Corrected type to TaskManagerApp.Models.User
+        public List<User> Users { get; set; } = new List<User>();
 
         public async Task<IActionResult> OnGet()
         {
-            var token = GetToken();
-            if (token == null)
-            {
-                return RedirectToPage("/Login");
-            }
-
             try
             {
-                // Set Authorization Header with the token
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("x-access-token", token);
-
-                // Call the API to get all users
-                var response = await _httpClient.GetAsync("https://sea-lion-app-772a9.ondigitalocean.app/v1/users/all");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    var usersResponse = JsonConvert.DeserializeObject<AllUsersResponse>(responseString);
-
-                    // Map the AllUsersResponse.User to TaskManagerApp.Models.User
-                    Users = usersResponse.allUsers
-                        .Select(user => new User
-                        {
-                            Id = user.uid,
-                            Username = user.name,
-                            Email = user.email
-                        })
-                        .ToList();
-                }
-                else
-                {
-                    ErrorMessage = "Unable to fetch users!";
-                }
+                // Fetch users from MongoDB for assignment
+                Users = await _dbContext.Users.Find(user => true).ToListAsync();
             }
             catch (Exception ex)
             {
-                ErrorMessage = "Error fetching users: " + ex.Message;
+                ErrorMessage = "Error fetching users from MongoDB: " + ex.Message;
             }
 
             return Page();
@@ -75,44 +50,40 @@ namespace TaskManagerApp.Pages
 
         public async Task<IActionResult> OnPost()
         {
-            var token = GetToken();
-            if (token == null)
-            {
-                return RedirectToPage("/Login");
-            }
-
             try
             {
-                // Set Authorization Header with the token
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("x-access-token", token);
+                // Generate a new task ID (GUID or other approach)
+                string taskId = Guid.NewGuid().ToString();
 
-                // Prepare the task data to be sent to the API
-                var taskData = new CreateTaskRequest
+                // Get the current user's ID from the session (this should be from your session management)
+                var createdByUid = GetToken(); // Assuming the token stores the user ID
+
+                if (string.IsNullOrEmpty(createdByUid))
                 {
-                    Description = Description,
-                    AssignedToUid = AssignedToUid
-                };
-
-                var json = JsonConvert.SerializeObject(taskData); // Use Newtonsoft.Json.JsonConvert
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                // POST the task to the API
-                var response = await _httpClient.PostAsync("https://sea-lion-app-772a9.ondigitalocean.app/v1/tasks/", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return RedirectToPage("/Index");
+                    ErrorMessage = "You must be logged in to create a task.";
+                    return Page();
                 }
-                else
-                {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    ErrorMessage = "Error creating task! Response: " + responseString;
-                }
+
+                // Create a new Task object
+                var task = new TaskManagerApp.Models.Task(
+                    taskId,
+                    Title,
+                    Description,
+                    DueDate,
+                    Category,
+                    createdByUid, // Set the CreatedByUid
+                    AssignedToUid // Set the AssignedToUid
+                );
+
+                // Insert the task into MongoDB
+                await _dbContext.Tasks.InsertOneAsync(task);
+
+                return RedirectToPage("/Index");
             }
             catch (Exception ex)
             {
-                ErrorMessage = "Error creating task: " + ex.Message;
+                // Handle errors
+                ErrorMessage = "Error creating task in MongoDB: " + ex.Message;
             }
 
             return Page();
@@ -120,7 +91,8 @@ namespace TaskManagerApp.Pages
 
         private string GetToken()
         {
-            return HttpContext.Session.GetString("auth_token");
+            // Retrieve the user ID from session (or JWT token, depending on your auth system)
+            return HttpContext.Session.GetString("auth_token"); // This assumes the user ID is stored in the session token
         }
     }
 }
